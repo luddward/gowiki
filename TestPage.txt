@@ -1,4 +1,1 @@
-This is a sample page
-This is a sample page
-This is a sample page
-This is a sample page
+Hello this is a fun project :)
