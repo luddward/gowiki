@@ -1,10 +1,25 @@
-<h1>Editing {{.Title}}</h1>
-
-<form action="/save/{{.Title}}" method="POST">
-	<div>
-		<textarea name="body" rows="20" cols="80">{{printf "%s" .Body}}</textarea>
-	</div>
-	<div>
-		<input type="submit" value="Save">
-	</div>
-</form>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{{ .Title }}</title>
+        <LINK href="/templ/styles.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+    	<div id="intro">
+    		<h1>GO WIKI </h1>
+    		<p> The place of knowledge</p>
+    	</div>
+        <div id="contents">
+        <h1>Editing {{.Title}}</h1>
+			<form action="/save/{{.Title}}" method="POST">
+				
+					<textarea name="body" rows="20" cols="80">{{printf "%s" .Body}}</textarea>
+					<input type="submit" value="Save">
+				
+			</form>
+        </div>
+        <footer id="footer">
+            Go WIKI
+        </footer>
+    </body>
+</html>

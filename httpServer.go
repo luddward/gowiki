@@ -4,11 +4,13 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 )
 
@@ -81,6 +83,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 }
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 
@@ -90,6 +93,10 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 		}
 		fn(w, r, m[2])
 	}
+}
+
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
 }
 
 // --------------- END HANDLERS --------------- //
@@ -113,13 +120,38 @@ func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
 	return m[2], nil
 }
 
+type justFilesFilesystem struct {
+	fs http.FileSystem
+}
+
+func (fs justFilesFilesystem) Open(name string) (http.File, error) {
+	f, err := fs.fs.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return neuteredReaddirFile{f}, nil
+}
+
+type neuteredReaddirFile struct {
+	http.File
+}
+
+func (f neuteredReaddirFile) Readdir(count int) ([]os.FileInfo, error) {
+	return nil, nil
+}
+
 //Main function
 func main() {
+	fmt.Println("Webserver started at: 127.0.0.1:8080")
 	flag.Parse()
 
+	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
+
+	fs := justFilesFilesystem{http.Dir("templ/")}
+	http.Handle("/templ/", http.StripPrefix("/templ/", http.FileServer(fs)))
 
 	if *addr {
 		l, err := net.Listen("tcp", "127.0.0.1:0")
