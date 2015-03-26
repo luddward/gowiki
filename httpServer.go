@@ -1,4 +1,4 @@
-package main
+package gowiki
 
 //Imports
 import (
@@ -14,10 +14,14 @@ import (
 	"regexp"
 )
 
-//Data struct for article
-type Page struct {
-	Title string
-	Body  []byte
+//Struct for the filesystem
+type justFilesFilesystem struct {
+	fs http.FileSystem
+}
+
+//
+type neuteredReaddirFile struct {
+	http.File
 }
 
 // --------------- GLOBALS --------------- //
@@ -27,25 +31,6 @@ var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 var (
 	addr = flag.Bool("addr", false, "find open address and print to final-port.txt")
 )
-
-// --------------- SAVE AND LOAD ------------- //
-func (p *Page) save() error {
-	filename := p.Title + ".txt"
-	return ioutil.WriteFile("data/"+filename, p.Body, 0600)
-}
-
-//load function
-func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
-	body, err := ioutil.ReadFile("data/" + filename)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Page{Title: title, Body: body}, nil
-}
-
-// --------------- END SAVE AND LOAD ------------ //
 
 // --------------- START HANDLERS --------------- //
 //view function
@@ -82,8 +67,13 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
-func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+/*
+	Validates and creates a handler if the request is valid!
 
+	If the request is valid then continue to the handler that
+	is passed in the parameter.
+*/
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 
@@ -95,6 +85,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 	}
 }
 
+//Handles root requests.
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
 }
@@ -120,20 +111,12 @@ func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
 	return m[2], nil
 }
 
-type justFilesFilesystem struct {
-	fs http.FileSystem
-}
-
 func (fs justFilesFilesystem) Open(name string) (http.File, error) {
 	f, err := fs.fs.Open(name)
 	if err != nil {
 		return nil, err
 	}
 	return neuteredReaddirFile{f}, nil
-}
-
-type neuteredReaddirFile struct {
-	http.File
 }
 
 func (f neuteredReaddirFile) Readdir(count int) ([]os.FileInfo, error) {
@@ -145,6 +128,7 @@ func main() {
 	fmt.Println("Webserver started at: 127.0.0.1:8080")
 	flag.Parse()
 
+	//Setup the Handlers.
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
@@ -170,6 +154,6 @@ func main() {
 		s.Serve(l)
 		return
 	}
-
+	//Listen to port 8080
 	http.ListenAndServe(":8080", nil)
 }
